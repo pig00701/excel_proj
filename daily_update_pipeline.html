@@ -1,0 +1,603 @@
+<title>Daily Update Pipeline — Diagram</title>
+<style>
+  :root{
+    --bg:#f4f5f7;
+    --panel:#ffffff;
+    --panel-2:#eef0f3;
+    --border:#dde0e6;
+    --text:#1a1d24;
+    --text-dim:#5b6270;
+    --accent:#1f8f87;
+    --accent-soft:rgba(31,143,135,0.09);
+    --warn:#a5720f;
+    --warn-soft:rgba(165,114,15,0.10);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0f1116;
+      --panel:#171a21;
+      --panel-2:#1d212a;
+      --border:#2a2f3a;
+      --text:#e7e9ee;
+      --text-dim:#8a90a0;
+      --accent:#3fc2b9;
+      --accent-soft:rgba(63,194,185,0.13);
+      --warn:#e0a83a;
+      --warn-soft:rgba(224,168,58,0.13);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0f1116; --panel:#171a21; --panel-2:#1d212a; --border:#2a2f3a;
+    --text:#e7e9ee; --text-dim:#8a90a0; --accent:#3fc2b9; --accent-soft:rgba(63,194,185,0.13);
+    --warn:#e0a83a; --warn-soft:rgba(224,168,58,0.13);
+  }
+  :root[data-theme="light"]{
+    --bg:#f4f5f7; --panel:#ffffff; --panel-2:#eef0f3; --border:#dde0e6;
+    --text:#1a1d24; --text-dim:#5b6270; --accent:#1f8f87; --accent-soft:rgba(31,143,135,0.09);
+    --warn:#a5720f; --warn-soft:rgba(165,114,15,0.10);
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;
+    padding:2.5rem 1.5rem 4rem;
+  }
+  .mono{
+    font-family:ui-monospace,"Cascadia Code","SF Mono",Consolas,monospace;
+    font-variant-numeric:tabular-nums;
+  }
+
+  .wrap{ max-width:920px; margin:0 auto; }
+
+  header{ margin-bottom:2.25rem; }
+  .eyebrow{
+    font-size:0.72rem;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--accent);
+    font-weight:600;
+    margin:0 0 0.6rem;
+  }
+  h1{
+    font-size:1.65rem;
+    line-height:1.25;
+    margin:0 0 0.5rem;
+    text-wrap:balance;
+    letter-spacing:-0.01em;
+  }
+  .sub{
+    color:var(--text-dim);
+    font-size:0.95rem;
+    line-height:1.6;
+    max-width:62ch;
+    margin:0;
+  }
+
+  /* ---------- diagram ---------- */
+  .diagram{
+    display:flex;
+    flex-direction:column;
+    gap:0;
+    margin:2.5rem 0;
+  }
+
+  .row{
+    display:flex;
+    align-items:stretch;
+    gap:0;
+  }
+
+  .source-box{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:1.1rem 1.2rem;
+    width:100%;
+    max-width:420px;
+    margin:0 auto;
+  }
+  .source-box .label{
+    font-size:0.72rem;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    color:var(--text-dim);
+    margin-bottom:0.65rem;
+    font-weight:600;
+  }
+  .file-row{
+    display:flex;
+    align-items:center;
+    gap:0.55rem;
+    padding:0.4rem 0.55rem;
+    border-radius:6px;
+    background:var(--panel-2);
+    margin-bottom:0.4rem;
+    font-size:0.83rem;
+  }
+  .file-row:last-child{ margin-bottom:0; }
+  .file-dot{
+    width:6px; height:6px; border-radius:50%;
+    background:var(--accent);
+    flex:none;
+  }
+  .file-name{ font-size:0.8rem; }
+  .file-tag{
+    margin-left:auto;
+    font-size:0.68rem;
+    color:var(--text-dim);
+    white-space:nowrap;
+  }
+  .folderpath-note{
+    margin-top:0.75rem;
+    padding-top:0.65rem;
+    border-top:1px dashed var(--border);
+    font-size:0.74rem;
+    color:var(--text-dim);
+    line-height:1.5;
+  }
+  .folderpath-note code{ color:var(--text); }
+
+  .arrow-down{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:0.65rem 0;
+    color:var(--text-dim);
+  }
+  .arrow-down svg{ display:block; }
+  .arrow-label{
+    font-size:0.72rem;
+    color:var(--text-dim);
+    margin-top:0.15rem;
+    text-align:center;
+    max-width:340px;
+  }
+  .arrow-label .mono{ color:var(--text); }
+
+  /* workbook container */
+  .workbook{
+    border:1.5px dashed var(--border);
+    border-radius:14px;
+    padding:1.4rem;
+    background:linear-gradient(180deg, var(--accent-soft), transparent 40%);
+  }
+  .workbook-head{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:1rem;
+    margin-bottom:1.1rem;
+  }
+  .workbook-title{
+    font-size:0.78rem;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    font-weight:600;
+    color:var(--text);
+  }
+  .workbook-meta{
+    font-size:0.72rem;
+    color:var(--text-dim);
+  }
+
+  .stage-grid{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:0.9rem;
+  }
+
+  .stage{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:1rem 1.1rem;
+  }
+  .stage-kicker{
+    font-size:0.68rem;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    color:var(--text-dim);
+    font-weight:600;
+    margin-bottom:0.5rem;
+  }
+
+  .helper-stage{
+    border-style:dashed;
+    background:var(--panel-2);
+  }
+  .helper-body{
+    display:flex;
+    align-items:center;
+    gap:0.9rem;
+  }
+  .helper-col{ flex:1 1 0; min-width:0; }
+  .helper-query{
+    font-size:0.8rem;
+    font-weight:600;
+    color:var(--accent);
+    margin-bottom:0.35rem;
+  }
+  .helper-arrow{
+    flex:none;
+    color:var(--text-dim);
+    display:flex;
+    align-items:center;
+  }
+  .helper-output{ max-width:280px; }
+  .helper-table{
+    border:1px solid var(--border);
+    border-radius:8px;
+    overflow:hidden;
+    background:var(--panel);
+  }
+  .helper-table-row{
+    display:grid;
+    grid-template-columns:1.4fr 1fr;
+    gap:0.5rem;
+    padding:0.35rem 0.6rem;
+    font-size:0.72rem;
+    border-bottom:1px solid var(--border);
+  }
+  .helper-table-row:last-child{ border-bottom:none; }
+  .helper-table-head{
+    background:var(--panel-2);
+    font-weight:600;
+    color:var(--text-dim);
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+    font-size:0.64rem;
+  }
+  .helper-caption{
+    font-size:0.72rem;
+    color:var(--text-dim);
+    margin-top:0.5rem;
+    line-height:1.5;
+  }
+  .config-table-row{ grid-template-columns:1fr 1.2fr 1.6fr; }
+  .config-table-row span:last-child{ color:var(--text-dim); }
+  @media (max-width:640px){
+    .helper-body{ flex-direction:column; align-items:stretch; }
+    .helper-arrow{ transform:rotate(90deg); align-self:center; }
+    .helper-output{ max-width:none; }
+  }
+
+  .config-row{
+    display:flex;
+    align-items:center;
+    gap:0.7rem;
+    flex-wrap:wrap;
+  }
+  .pill{
+    display:inline-flex;
+    align-items:center;
+    gap:0.4rem;
+    padding:0.3rem 0.65rem;
+    border-radius:999px;
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    font-size:0.78rem;
+  }
+  .pill.warn{
+    background:var(--warn-soft);
+    border-color:transparent;
+    color:var(--warn);
+    font-weight:600;
+  }
+
+  .pipeline{
+    display:flex;
+    align-items:center;
+    gap:0.5rem;
+    overflow-x:auto;
+    padding-bottom:0.2rem;
+  }
+  .step{
+    flex:1 1 0;
+    min-width:150px;
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    border-radius:9px;
+    padding:0.75rem 0.85rem;
+    position:relative;
+  }
+  .step-num{
+    font-size:0.68rem;
+    color:var(--accent);
+    font-weight:700;
+    margin-bottom:0.3rem;
+  }
+  .step-title{
+    font-size:0.83rem;
+    font-weight:600;
+    margin-bottom:0.25rem;
+  }
+  .step-desc{
+    font-size:0.74rem;
+    color:var(--text-dim);
+    line-height:1.45;
+  }
+  .step-conn{
+    flex:none;
+    color:var(--text-dim);
+    font-size:0.9rem;
+    padding:0 0.1rem;
+  }
+
+  .scope-note{
+    grid-column:1 / -1;
+    font-size:0.74rem;
+    color:var(--text-dim);
+    padding-top:0.2rem;
+  }
+
+  .output-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:1rem;
+    flex-wrap:wrap;
+  }
+  .output-label{
+    display:flex;
+    align-items:center;
+    gap:0.6rem;
+  }
+  .output-swatch{
+    width:8px; height:8px; border-radius:50%;
+    background:var(--accent);
+  }
+
+  /* legend / notes */
+  .notes{
+    margin-top:2.2rem;
+    display:grid;
+    gap:0.85rem;
+  }
+  .note{
+    display:flex;
+    gap:0.75rem;
+    padding:0.9rem 1rem;
+    border:1px solid var(--border);
+    border-radius:10px;
+    background:var(--panel);
+  }
+  .note-mark{
+    flex:none;
+    width:1.5rem; height:1.5rem;
+    border-radius:6px;
+    background:var(--accent-soft);
+    color:var(--accent);
+    display:flex; align-items:center; justify-content:center;
+    font-size:0.78rem;
+    font-weight:700;
+  }
+  .note-body p{
+    margin:0;
+    font-size:0.85rem;
+    line-height:1.6;
+    color:var(--text);
+  }
+  .note-body p + p{ margin-top:0.35rem; color:var(--text-dim); font-size:0.8rem; }
+
+  @media (max-width:640px){
+    h1{ font-size:1.35rem; }
+    .step{ min-width:130px; }
+  }
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Power Query — Daily Update</p>
+    <h1>โฟลเดอร์ต้นทางกับไฟล์ report แยกกันคนละที่ แต่เชื่อมกันผ่าน query</h1>
+    <p class="sub">แผนภาพนี้แสดงว่าไฟล์ไหนอยู่ที่ไหน, ลำดับการประมวลผลจริงในตัว query, และจุดที่ทั้งสองฝั่งเชื่อมกัน</p>
+  </header>
+
+  <div class="diagram">
+
+    <!-- Source folder -->
+    <div class="row">
+      <div class="source-box">
+        <div class="label">Source Folder — ที่ไหนก็ได้ ตั้งชื่อเองได้</div>
+        <div class="file-row">
+          <span class="file-dot"></span>
+          <span class="file-name mono">Daily_Update_2566.xlsm</span>
+          <span class="file-tag">sheet "Daily Update"</span>
+        </div>
+        <div class="file-row">
+          <span class="file-dot"></span>
+          <span class="file-name mono">Daily_Update_2567.xlsm</span>
+          <span class="file-tag">sheet "Daily Update"</span>
+        </div>
+        <div class="file-row">
+          <span class="file-dot"></span>
+          <span class="file-name mono">...</span>
+          <span class="file-tag">ไฟล์อื่น ๆ ในโฟลเดอร์</span>
+        </div>
+        <div class="file-row" style="opacity:0.55;">
+          <span class="file-dot" style="background:var(--warn);"></span>
+          <span class="file-name mono">~$Daily_Update_xxx.xlsm</span>
+          <span class="file-tag">lock file — ถูกกรองทิ้ง</span>
+        </div>
+        <div class="folderpath-note">
+          อ่านผ่าน <code class="mono">FolderPath</code> ที่ตั้งไว้ใน <code class="mono">ConfigTable</code>
+          (sheet "config" ในไฟล์ report) — ย้ายโฟลเดอร์เมื่อไหร่ แก้ค่าใน sheet แล้ว Refresh ไม่ต้องเปิด M code
+        </div>
+        <div class="folderpath-note">
+          ชื่อไฟล์<strong>ต้องลงท้ายด้วยเลขปี 4 หลักเสมอ</strong> (เช่น <code class="mono">..._2566</code>)
+          — query ดึงปีจาก 4 ตัวอักษรสุดท้ายก่อนนามสกุลไฟล์ตรงๆ ไม่ได้ค้นหารูปแบบปี
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow-down">
+      <svg width="22" height="34" viewBox="0 0 22 34" fill="none">
+        <line x1="11" y1="0" x2="11" y2="26" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M2 20 L11 30 L20 20" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <div class="arrow-label"><span class="mono">Folder.Files(FolderPath)</span> สแกนหาไฟล์ <span class="mono">.xlsm</span> ทั้งหมด (ยกเว้น lock file <span class="mono">~$</span> ที่โผล่ตอนมีคนเปิดไฟล์ค้าง)</div>
+    </div>
+
+    <!-- Report workbook -->
+    <div class="workbook">
+      <div class="workbook-head">
+        <span class="workbook-title">Report Workbook — ชื่อไฟล์/ตำแหน่งอะไรก็ได้</span>
+        <span class="workbook-meta mono">Excel.CurrentWorkbook()</span>
+      </div>
+
+      <div class="stage-grid">
+
+        <!-- helper query: header list reference -->
+        <div class="stage helper-stage">
+          <div class="stage-kicker">ตัวช่วยดู header — แยก query ต่างหาก</div>
+          <div class="helper-body">
+            <div class="helper-col">
+              <div class="helper-query mono">Daily_Update_HeaderList.pq</div>
+              <div class="step-desc">
+                อ่านไฟล์ <span class="mono">.xlsm</span> ไฟล์แรกที่เจอในโฟลเดอร์เดียวกัน (ไม่กรองผ่าน <span class="mono">SelectColumnTable</span>)
+                ทำ clean header ผ่าน <span class="mono">fnCleanMergedHeadersSkipJunk</span> เหมือนกัน
+                แล้วโหลดผลลัพธ์ลง sheet แยกต่างหากในไฟล์ report นี้
+              </div>
+            </div>
+            <div class="helper-arrow">
+              <svg width="34" height="18" viewBox="0 0 34 18" fill="none">
+                <line x1="0" y1="9" x2="24" y2="9" stroke="currentColor" stroke-width="1.5"/>
+                <path d="M18 2 L27 9 L18 16" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="helper-col helper-output">
+              <div class="helper-table">
+                <div class="helper-table-row helper-table-head">
+                  <span>ชื่อ header</span><span>ตำแหน่ง column</span>
+                </div>
+                <div class="helper-table-row"><span class="mono">Order Info_ID</span><span class="mono">A</span></div>
+                <div class="helper-table-row"><span class="mono">Order Info_Date</span><span class="mono">B</span></div>
+                <div class="helper-table-row"><span class="mono">Metrics_Qty</span><span class="mono">C</span></div>
+                <div class="helper-table-row" style="opacity:0.5;"><span class="mono">...</span><span class="mono">...</span></div>
+              </div>
+              <div class="helper-caption">ดูตารางนี้แล้วค่อยพิมพ์ชื่อที่ต้องการลง <span class="mono">ColumnName</span> ด้านล่าง</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- settings config -->
+        <div class="stage">
+          <div class="stage-kicker">Sheet "config" — การตั้งค่าทั้งหมด (Table: <span class="mono">ConfigTable</span>)</div>
+          <div class="helper-table" style="max-width:560px;">
+            <div class="helper-table-row config-table-row helper-table-head">
+              <span>Setting</span><span>Value</span><span>หมายเหตุ (query ไม่ใช้)</span>
+            </div>
+            <div class="helper-table-row config-table-row"><span class="mono">FolderPath</span><span class="mono">C:\...\DailyFiles</span><span>โฟลเดอร์ไฟล์ต้นทาง — บังคับต้องมี</span></div>
+            <div class="helper-table-row config-table-row"><span class="mono">SheetName</span><span class="mono">Daily Update</span><span>ชื่อ sheet ที่ดึง</span></div>
+            <div class="helper-table-row config-table-row"><span class="mono">JunkRows</span><span class="mono">3</span><span>แถวขยะบนสุดที่ข้าม</span></div>
+            <div class="helper-table-row config-table-row"><span class="mono">HeaderRows</span><span class="mono">3</span><span>แถว merged header</span></div>
+            <div class="helper-table-row config-table-row"><span class="mono">Separator</span><span class="mono">_</span><span>ตัวคั่นชื่อ header</span></div>
+            <div class="helper-table-row config-table-row"><span class="mono">FileExtension</span><span class="mono">.xlsm</span><span>นามสกุลไฟล์ที่สแกน</span></div>
+          </div>
+          <div class="helper-caption">อ่านผ่าน query <span class="mono">Config</span> — ทุกค่ายกเว้น <span class="mono">FolderPath</span> มี default ในตัว ลบแถวทิ้งได้</div>
+        </div>
+
+        <!-- column selection config -->
+        <div class="stage">
+          <div class="stage-kicker">Sheet "select column" — เลือกคอลัมน์ที่จะเก็บ</div>
+          <div class="config-row">
+            <span class="pill warn">Table name: <span class="mono">&nbsp;SelectColumnTable</span></span>
+            <span class="pill">column: <span class="mono">&nbsp;ColumnName</span></span>
+            <span class="pill">เพิ่มคอลัมน์ <span class="mono">&nbsp;หมายเหตุ&nbsp;</span> ต่อท้ายได้ query ไม่สนใจ</span>
+          </div>
+        </div>
+
+        <!-- pipeline steps, in true execution order -->
+        <div class="stage">
+          <div class="stage-kicker">Pipeline — ทำทีละไฟล์ก่อน แล้วค่อยรวม</div>
+          <div class="pipeline">
+            <div class="step">
+              <div class="step-num">STEP 1</div>
+              <div class="step-title">Clean header</div>
+              <div class="step-desc">ข้าม 3 แถวขยะ แล้วรวม merged header 3 แถว ผ่าน <span class="mono">fnCleanMergedHeadersSkipJunk</span> → <span class="mono">fnCleanMergedHeaders</span></div>
+            </div>
+            <div class="step-conn">→</div>
+            <div class="step">
+              <div class="step-num">STEP 2</div>
+              <div class="step-title">Select columns</div>
+              <div class="step-desc">กรองเหลือเฉพาะชื่อใน <span class="mono">SelectColumnTable</span> — ทำ<strong>ต่อไฟล์</strong> ก่อนรวม</div>
+            </div>
+            <div class="step-conn">→</div>
+            <div class="step">
+              <div class="step-num">STEP 3</div>
+              <div class="step-title">Add SourceFile + ปี</div>
+              <div class="step-desc">เพิ่ม <span class="mono">SourceFile</span> (ชื่อไฟล์) และ <span class="mono">ปี</span> (4 ตัวท้ายของชื่อไฟล์ก่อนนามสกุล เช่น <span class="mono">2566</span>)</div>
+            </div>
+            <div class="step-conn">→</div>
+            <div class="step">
+              <div class="step-num">STEP 4</div>
+              <div class="step-title">Combine</div>
+              <div class="step-desc"><span class="mono">Table.Combine</span> รวมทุกไฟล์เป็นตารางเดียว</div>
+            </div>
+          </div>
+          <div class="scope-note">query ที่ทำงานนี้: <span class="mono">Daily_Update_Combined.pq</span></div>
+        </div>
+
+        <!-- output -->
+        <div class="stage">
+          <div class="stage-kicker">ผลลัพธ์</div>
+          <div class="output-row">
+            <div class="output-label">
+              <span class="output-swatch"></span>
+              <span style="font-size:0.85rem;">โหลดเข้า sheet ผลลัพธ์ในไฟล์ report เดียวกันนี้ (Close &amp; Load) — มีคอลัมน์ <span class="mono">SourceFile</span> และ <span class="mono">ปี</span> ติดมาด้วย</span>
+            </div>
+            <span class="pill">Refresh = ดึงข้อมูลใหม่จากทุกไฟล์อีกครั้ง</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="notes">
+    <div class="note">
+      <div class="note-mark">1</div>
+      <div class="note-body">
+        <p>ไฟล์ report กับโฟลเดอร์ต้นทางไม่ต้องอยู่ที่เดียวกัน และไฟล์ report ตั้งชื่ออะไรก็ได้</p>
+        <p><span class="mono">Excel.CurrentWorkbook()</span> อ้างถึง "workbook ที่ query กำลังรันอยู่" เท่านั้น ไม่ผูกกับชื่อไฟล์หรือ path เลย</p>
+      </div>
+    </div>
+    <div class="note">
+      <div class="note-mark">2</div>
+      <div class="note-body">
+        <p><span class="mono">SelectColumnTable</span> ต้องอยู่ในไฟล์ report เดียวกันกับ query เสมอ — ข้าม workbook ไม่ได้</p>
+        <p>ถ้าเปลี่ยนชื่อ Table เป็นอย่างอื่น query จะหาไม่เจอและ error ทันที</p>
+      </div>
+    </div>
+    <div class="note">
+      <div class="note-mark">3</div>
+      <div class="note-body">
+        <p>ลำดับจริงคือ <strong>clean header → เลือกคอลัมน์ → รวมไฟล์</strong> ไม่ใช่รวมก่อนแล้วค่อยเลือกคอลัมน์</p>
+        <p>กรองคอลัมน์ทิ้งตั้งแต่ระดับไฟล์ก่อน ทำให้ตอน combine เบากว่า ไม่ต้อง union คอลัมน์ที่ไม่ใช้จากทุกไฟล์</p>
+      </div>
+    </div>
+    <div class="note">
+      <div class="note-mark">4</div>
+      <div class="note-body">
+        <p>ถ้าโฟลเดอร์ไม่มีไฟล์ที่ใช้ได้เลย query จะ error พร้อมข้อความชัดเจนบอก <span class="mono">FolderPath</span> ที่ใช้อยู่</p>
+        <p>เจอข้อความนี้ = path ผิด หรือไม่มีไฟล์ไหนมี sheet "Daily Update" — ไม่ใช่ query พัง</p>
+      </div>
+    </div>
+    <div class="note">
+      <div class="note-mark">5</div>
+      <div class="note-body">
+        <p>คอลัมน์ <span class="mono">ปี</span> มาจาก 4 ตัวอักษรสุดท้ายของชื่อไฟล์ก่อนนามสกุลตรงๆ — ไม่ใช่การค้นหารูปแบบปีในชื่อ</p>
+        <p>ถ้าชื่อไฟล์ไม่ได้ลงท้ายด้วยเลขปี 4 หลัก (เช่นลงท้ายด้วยวันที่) จะได้ <span class="mono">null</span> แทน ไม่ error แต่ไม่มีปีให้ใช้</p>
+      </div>
+    </div>
+    <div class="note">
+      <div class="note-mark">6</div>
+      <div class="note-body">
+        <p>การตั้งค่าทั้งหมดแก้จาก sheet "config" (<span class="mono">ConfigTable</span>) แล้วกด Refresh — ไม่ต้องเปิด M code อีก</p>
+        <p>query ที่ต้องโหลดในไฟล์ report มี 4 ตัว: <span class="mono">fnCleanMergedHeaders</span>, <span class="mono">fnCleanMergedHeadersSkipJunk</span>, <span class="mono">Config</span>, <span class="mono">Daily_Update_Combined</span> (+ <span class="mono">Daily_Update_HeaderList</span> ถ้าใช้ตัวช่วยดู header)</p>
+      </div>
+    </div>
+  </div>
+</div>
