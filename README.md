@@ -1,10 +1,13 @@
-# Excel Power Query — Clean Merged Headers & Null Rows
+# Excel — Clean Merged Headers & Null Rows (Daily Update Pipeline)
 
 โปรเจกต์สำหรับแก้ไขปัญหา Excel ที่มี:
 1. **Header แบบ Merge Cell 3 แถว** — รวม header หลายชั้นให้เป็นชื่อคอลัมน์เดียว
 2. **แถวที่เป็น null ทั้งหมด** — ลบแถวว่างที่ไม่มีข้อมูล
 
-ทั้งหมดใช้ **Power Query M** เท่านั้น ไม่มี VBA, Python ใน production
+> **แนวปัจจุบัน: VBA** — pipeline ถูก port จาก Power Query มาเป็น VBA ทั้งชุด
+> (แนวคิดตาม `daily_update_pipeline.html` เหมือนเดิมทุกข้อ) ดูโค้ดในโฟลเดอร์
+> [`vba/`](vba/) และวิธีติดตั้งใน [`vba/SETUP.md`](vba/SETUP.md)
+> โค้ด Power Query เดิมใน `queries/` เก็บไว้เป็น reference
 
 ---
 
