@@ -82,7 +82,10 @@ let
     else
         SortedFiles{0},
 
-    Workbook = Excel.Workbook(FirstFile[Content], null, true),
+    // Binary.Buffer: read the file's bytes into memory once — the editor's
+    // preview and any step re-evaluation otherwise re-read the .xlsm from
+    // disk each time (same fix as Daily_Update_Combined).
+    Workbook = Excel.Workbook(Binary.Buffer(FirstFile[Content]), null, true),
     DailyUpdateRow = Table.SelectRows(Workbook, each [Item] = SheetName and [Kind] = "Sheet"),
     RawTable = if Table.RowCount(DailyUpdateRow) = 0 then
         error [

@@ -5,9 +5,18 @@
 //          and remove fully-null rows.
 //
 // Parameters:
-//   SourceTable  : The raw table from Excel (headers NOT promoted)
-//   HeaderRows   : Number of header rows (e.g., 3 for 3-row merged headers)
-//   Separator    : Character to join header levels (default "_")
+//   SourceTable   : The raw table from Excel (headers NOT promoted)
+//   HeaderRows    : Number of header rows (e.g., 3 for 3-row merged headers)
+//   Separator     : Character to join header levels (default "_")
+//   ColumnsToKeep : Optional list of combined header names to keep. When
+//                   given, columns are trimmed IMMEDIATELY after the rename
+//                   step — before null-row removal and type detection — so
+//                   those expensive full-column scans only ever touch the
+//                   columns actually kept (a ~300-column sheet trimmed to a
+//                   few dozen skips most of the work). MissingField.Ignore:
+//                   a name not present in this table is just skipped.
+//                   Omit / pass null for the original keep-everything
+//                   behavior (existing callers are unaffected).
 //
 // Strategy:
 //   1. Extract the top N rows as the header section
@@ -18,9 +27,13 @@
 //      header rows) get a fallback name "Column_A", "Column_B", ... (Excel
 //      column letter, based on the column's TRUE original position) —
 //      duplicate combined names get suffix "_2", "_3", ...
-//   6. Skip header rows, rename data columns with combined header
+//   6. Skip header rows, rename data columns with combined header, then
+//      trim to ColumnsToKeep (when given) before any per-value scanning
 //   7. Remove rows where ALL columns are null
-//   8. Auto-detect and set column types
+//   8. Auto-detect and set column types (on a Table.Buffer'd copy — the
+//      per-column value scan below references the table once per column,
+//      and without the buffer M's lazy evaluation can re-run the whole
+//      chain back to the workbook binary for every column)
 //
 // IMPORTANT: fallback names are assigned AFTER FillRight/FillDown (steps
 // 2-3), not before. Assigning them first and writing the placeholder text
@@ -30,7 +43,7 @@
 // ============================================================================
 
 let
-    Source = (SourceTable as table, HeaderRows as number, optional Separator as text) as table =>
+    Source = (SourceTable as table, HeaderRows as number, optional Separator as text, optional ColumnsToKeep as nullable list) as table =>
     let
         Sep = if Separator = null then "_" else Separator,
 
@@ -172,10 +185,20 @@ let
             List.Zip({HeaderColNames, CombinedHeaderRow})
         ),
 
+        // Trim to the requested columns NOW — steps 7 and 8 below scan
+        // every value of every column they see, so dropping unwanted
+        // columns first is what keeps a wide sheet cheap. Has to happen
+        // after the rename: ColumnsToKeep holds combined header names,
+        // which don't exist before this point.
+        SelectedData = if ColumnsToKeep = null then
+            RenamedData
+        else
+            Table.SelectColumns(RenamedData, ColumnsToKeep, MissingField.Ignore),
+
         // --- Step 7: Remove rows where ALL columns are null ---
-        AllColNames = Table.ColumnNames(RenamedData),
+        AllColNames = Table.ColumnNames(SelectedData),
         CleanedData = Table.SelectRows(
-            RenamedData,
+            SelectedData,
             each not List.AllTrue(
                 List.Transform(
                     AllColNames,
@@ -189,14 +212,21 @@ let
         // A single sample would misclassify mixed columns (e.g. numbers with
         // an occasional "N/A") as numeric, which then errors out every cell
         // that fails Number.From during the actual type conversion below.
+        //
+        // Buffered because the scan below pulls Table.Column once per
+        // column: unbuffered, each pull can lazily re-evaluate everything
+        // upstream (including re-reading the Excel source) — N columns =
+        // N re-reads. Buffering here is cheap because SelectedData already
+        // trimmed the table down to only the kept columns.
+        BufferedData = Table.Buffer(CleanedData),
         TypedData = Table.TransformColumnTypes(
-            CleanedData,
+            BufferedData,
             List.Transform(
                 AllColNames,
                 each
                     let
                         colName = _,
-                        allValues = List.RemoveNulls(Table.Column(CleanedData, colName)),
+                        allValues = List.RemoveNulls(Table.Column(BufferedData, colName)),
                         isNumeric = List.Count(allValues) > 0 and List.AllTrue(
                             List.Transform(
                                 allValues,

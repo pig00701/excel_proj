@@ -13,12 +13,29 @@
 //   HeaderRows     | 3                              | แถว merged header
 //   Separator      | _                              | ตัวคั่นชื่อ header
 //   FileExtension  | .xlsm                          | นามสกุลไฟล์ที่สแกน
+//   YearFrom       | 2566                           | (optional) ปีแรกที่ดึง
+//   YearTo         | 2567                           | (optional) ปีสุดท้ายที่ดึง
+//   CurrentYear    | 2569                           | (optional) เปิดโหมด archive/current
+//
+// YearFrom/YearTo filter source FILES by the 4-digit year at the end of the
+// file name (e.g. "Daily_Update_2566.xlsm") before the file is ever opened —
+// use them to skip old yearly files entirely. Either bound may be set alone;
+// omit both to combine every file (the default). Files whose name doesn't
+// end in a 4-digit year are still included even when a filter is set.
+//
+// CurrentYear activates the archive/current split (incremental-refresh
+// pattern): Daily_Update_Archive combines years BELOW CurrentYear into a
+// static table (loaded once, refresh disabled), and Daily_Update_Combined
+// then only re-opens files of CurrentYear onward, prepending that table.
+// Omit CurrentYear to keep the original everything-per-refresh behavior.
+// See Daily_Update_Archive.pq for setup + new-year rollover steps.
 //
 // Rules:
 //   - Setting names match case-insensitively and ignore surrounding spaces.
 //   - Every setting except FolderPath has a default (the values shown
-//     above), so a missing row just falls back — only FolderPath is
-//     required and errors with a clear message when absent.
+//     above; YearFrom/YearTo default to "no filter"), so a missing row just
+//     falls back — only FolderPath is required and errors with a clear
+//     message when absent.
 //   - Extra columns (like หมายเหตุ) are ignored — add as many as you like.
 //   - FileExtension may be typed with or without the leading dot.
 //
@@ -52,13 +69,20 @@ let
     ExtensionRaw = Text.Lower(Text.Trim(Text.From(fnConfigValue(RawTable, "FileExtension", ".xlsm")))),
     FileExtension = if Text.StartsWith(ExtensionRaw, ".") then ExtensionRaw else "." & ExtensionRaw,
 
+    YearFromRaw = fnConfigValue(RawTable, "YearFrom", null),
+    YearToRaw = fnConfigValue(RawTable, "YearTo", null),
+    CurrentYearRaw = fnConfigValue(RawTable, "CurrentYear", null),
+
     Result = [
         FolderPath = FolderPath,
         SheetName = Text.From(fnConfigValue(RawTable, "SheetName", "Daily Update")),
         JunkRows = Number.From(fnConfigValue(RawTable, "JunkRows", 3)),
         HeaderRows = Number.From(fnConfigValue(RawTable, "HeaderRows", 3)),
         Separator = Text.From(fnConfigValue(RawTable, "Separator", "_")),
-        FileExtension = FileExtension
+        FileExtension = FileExtension,
+        YearFrom = if YearFromRaw = null then null else Number.From(YearFromRaw),
+        YearTo = if YearToRaw = null then null else Number.From(YearToRaw),
+        CurrentYear = if CurrentYearRaw = null then null else Number.From(CurrentYearRaw)
     ]
 in
     Result
