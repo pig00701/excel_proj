@@ -36,11 +36,15 @@ Attribute VB_Name = "modCleanHeaders"
 ' ============================================================================
 Option Explicit
 
-Public Function CleanMergedHeaders(ByVal rawGrid As Variant, _
-                                   ByVal junkRows As Long, _
-                                   ByVal headerRows As Long, _
-                                   ByVal separator As String, _
-                                   ByVal columnsToKeep As Collection) As Variant
+' Header-only part of the pipeline (steps 1-5): from a raw grid that
+' contains at least junkRows+headerRows rows, produce the final combined
+' header name of every column. Split out so modCombine can resolve column
+' positions from a small header-block read WITHOUT loading the whole
+' sheet, then pull only the columns it needs.
+Public Function BuildCombinedHeaders(ByVal rawGrid As Variant, _
+                                     ByVal junkRows As Long, _
+                                     ByVal headerRows As Long, _
+                                     ByVal separator As String) As String()
     Dim nRows As Long
     Dim nCols As Long
     nRows = UBound(rawGrid, 1)
@@ -49,7 +53,7 @@ Public Function CleanMergedHeaders(ByVal rawGrid As Variant, _
     Dim headerTop As Long
     headerTop = junkRows + 1
     If junkRows + headerRows > nRows Then
-        Err.Raise vbObjectError + 520, "CleanMergedHeaders", _
+        Err.Raise vbObjectError + 520, "BuildCombinedHeaders", _
             "ข้อมูลมีแค่ " & nRows & " แถว น้อยกว่า JunkRows (" & junkRows & _
             ") + HeaderRows (" & headerRows & ") — เช็คค่าใน ConfigTable"
     End If
@@ -145,6 +149,27 @@ Public Function CleanMergedHeaders(ByVal rawGrid As Variant, _
             seen.Add baseName, 1
         End If
     Next c
+
+    BuildCombinedHeaders = combined
+End Function
+
+Public Function CleanMergedHeaders(ByVal rawGrid As Variant, _
+                                   ByVal junkRows As Long, _
+                                   ByVal headerRows As Long, _
+                                   ByVal separator As String, _
+                                   ByVal columnsToKeep As Collection) As Variant
+    Dim nRows As Long
+    Dim nCols As Long
+    nRows = UBound(rawGrid, 1)
+    nCols = UBound(rawGrid, 2)
+
+    ' Steps 1-5 live in BuildCombinedHeaders (shared with modCombine's
+    ' targeted per-column read path).
+    Dim combined() As String
+    combined = BuildCombinedHeaders(rawGrid, junkRows, headerRows, separator)
+
+    Dim c As Long
+    Dim r As Long
 
     ' --- Step 6: resolve output columns (keep order of columnsToKeep) -----
     Dim outIdx() As Long

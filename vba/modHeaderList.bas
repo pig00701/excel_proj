@@ -22,23 +22,35 @@ Public Sub RunDailyUpdateHeaderList()
     Dim prevEnableEvents As Boolean
     Dim prevCalculation As XlCalculation
     Dim prevDisplayAlerts As Boolean
+    Dim prevAutomationSecurity As MsoAutomationSecurity
 
     prevScreenUpdating = Application.ScreenUpdating
     prevEnableEvents = Application.EnableEvents
     prevCalculation = Application.Calculation
     prevDisplayAlerts = Application.DisplayAlerts
+    prevAutomationSecurity = Application.AutomationSecurity
 
     On Error GoTo ErrHandler
     Application.ScreenUpdating = False
     Application.EnableEvents = False
     Application.Calculation = xlCalculationManual
     Application.DisplayAlerts = False
+    Application.AutomationSecurity = msoAutomationSecurityForceDisable
 
     Dim cfg As DailyUpdateConfig
     cfg = ReadDailyUpdateConfig()
 
-    Dim files As Collection
-    Set files = ListSourceFiles(cfg.FolderPath, cfg.FileExtension)
+    ' Candidate files as FULL paths. CurrentFilePath (when set) goes first —
+    ' it is the live file, so its layout is the most current reference for
+    ' picking column names; the FolderPath files follow as fallback.
+    Dim files As New Collection
+    If cfg.CurrentFilePath <> vbNullString Then
+        If Dir(cfg.CurrentFilePath) <> vbNullString Then files.Add cfg.CurrentFilePath
+    End If
+    Dim folderFile As Variant
+    For Each folderFile In ListSourceFiles(cfg.FolderPath, cfg.FileExtension)
+        files.Add cfg.FolderPath & Application.PathSeparator & CStr(folderFile)
+    Next folderFile
     If files.Count = 0 Then
         Err.Raise vbObjectError + 540, "RunDailyUpdateHeaderList", _
             "ไม่พบไฟล์ " & cfg.FileExtension & " ใน FolderPath = " & cfg.FolderPath
@@ -53,15 +65,14 @@ Public Sub RunDailyUpdateHeaderList()
     cleaned = Empty
     For Each fileName In files
         Set wb = Workbooks.Open( _
-            fileName:=cfg.FolderPath & Application.PathSeparator & CStr(fileName), _
-            ReadOnly:=True, UpdateLinks:=0)
+            fileName:=CStr(fileName), ReadOnly:=True, UpdateLinks:=0)
         Set ws = FindSheet(wb, cfg.SheetName)
         If Not ws Is Nothing Then
             ' Keep ALL columns (columnsToKeep = Nothing) — the whole point
             ' is to see every available header name.
             cleaned = CleanMergedHeaders(ReadSheetGrid(ws), cfg.JunkRows, _
                                          cfg.HeaderRows, cfg.Separator, Nothing)
-            usedFile = CStr(fileName)
+            usedFile = FileNameFromPath(CStr(fileName))
         End If
         wb.Close SaveChanges:=False
         If Not IsEmpty(cleaned) Then Exit For
@@ -94,6 +105,7 @@ Public Sub RunDailyUpdateHeaderList()
     Application.EnableEvents = prevEnableEvents
     Application.Calculation = prevCalculation
     Application.DisplayAlerts = prevDisplayAlerts
+    Application.AutomationSecurity = prevAutomationSecurity
 
     MsgBox "อ่าน header จากไฟล์ """ & usedFile & """ ได้ " & nCols & _
            " คอลัมน์ -> sheet """ & OUTPUT_SHEET & """" & vbCrLf & vbCrLf & _
@@ -110,5 +122,6 @@ ErrHandler:
     Application.EnableEvents = prevEnableEvents
     Application.Calculation = prevCalculation
     Application.DisplayAlerts = prevDisplayAlerts
+    Application.AutomationSecurity = prevAutomationSecurity
     ReportError "RunDailyUpdateHeaderList", errNum, errDesc
 End Sub

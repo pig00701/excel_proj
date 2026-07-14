@@ -13,11 +13,17 @@ Attribute VB_Name = "modConfig"
 '   HeaderRows     | 3                     | แถว merged header
 '   Separator      | _                     | ตัวคั่นชื่อ header
 '   FileExtension  | .xlsm                 | นามสกุลไฟล์ที่สแกน
+'   CurrentFilePath| E:\...\ยอดวันนี้.xlsm  | (optional) เปิด archive mode
 '
 ' Rules (same as the Power Query version):
 '   - Setting names match case-insensitively, ignoring surrounding spaces.
 '   - Only FolderPath is required; everything else has a default, so rows
 '     other than FolderPath can be deleted entirely.
+'   - CurrentFilePath set = ARCHIVE MODE: FolderPath becomes the closed
+'     old-year files that RunDailyUpdateArchive freezes onto a hidden
+'     sheet; RunDailyUpdateCombine then opens ONLY CurrentFilePath (full
+'     path to a single file — any name, any location) and appends it to
+'     the frozen archive. Delete the row to return to normal scan-all mode.
 '
 ' SelectColumnTable (sheet "select column", table name "SelectColumnTable"):
 '   one column "ColumnName" listing the combined header names to keep.
@@ -32,6 +38,7 @@ Public Type DailyUpdateConfig
     HeaderRows As Long
     Separator As String
     FileExtension As String
+    CurrentFilePath As String   ' non-empty = archive mode
 End Type
 
 Public Function ReadDailyUpdateConfig() As DailyUpdateConfig
@@ -77,6 +84,7 @@ Public Function ReadDailyUpdateConfig() As DailyUpdateConfig
                     Case "headerrows":    cfg.HeaderRows = CLng(settingValue)
                     Case "separator":     cfg.Separator = CStr(settingValue)
                     Case "fileextension": cfg.FileExtension = Trim$(CStr(settingValue))
+                    Case "currentfilepath": cfg.CurrentFilePath = Trim$(CStr(settingValue))
                 End Select
             End If
         Next r

@@ -118,6 +118,16 @@ Public Function YearFromFileName(ByVal fileName As String) As Variant
     End If
 End Function
 
+' File name (with extension) from a full path, handling both \ and /.
+Public Function FileNameFromPath(ByVal fullPath As String) As String
+    Dim posBack As Long
+    Dim posFwd As Long
+    posBack = InStrRev(fullPath, "\")
+    posFwd = InStrRev(fullPath, "/")
+    If posFwd > posBack Then posBack = posFwd
+    FileNameFromPath = Mid$(fullPath, posBack + 1)
+End Function
+
 ' List file names in folderPath matching fileExtension, skipping Excel
 ' lock files ("~$..." — they appear whenever someone has a file open).
 ' Returns a Collection of file names (not full paths), in Dir() order.
@@ -137,6 +147,20 @@ Public Function ListSourceFiles(ByVal folderPath As String, ByVal fileExtension 
         f = Dir()
     Loop
     Set ListSourceFiles = files
+End Function
+
+' Read an arbitrary rectangle of a sheet into a 1-based 2D Variant array.
+' Range.Value collapses a single cell to a scalar — this always returns 2D.
+Public Function Read2D(ByVal ws As Worksheet, _
+                       ByVal row1 As Long, ByVal col1 As Long, _
+                       ByVal row2 As Long, ByVal col2 As Long) As Variant
+    If row1 = row2 And col1 = col2 Then
+        Dim single2D(1 To 1, 1 To 1) As Variant
+        single2D(1, 1) = ws.Cells(row1, col1).Value
+        Read2D = single2D
+    Else
+        Read2D = ws.Range(ws.Cells(row1, col1), ws.Cells(row2, col2)).Value
+    End If
 End Function
 
 ' Read a sheet's full grid starting from A1 (like Power Query does) into a
