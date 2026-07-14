@@ -51,6 +51,14 @@ Public Sub RunDailyUpdateYearRange()
     Dim cfg As DailyUpdateConfig
     cfg = ReadDailyUpdateConfig()
 
+    ' An inverted range can never match anything — the dropdowns validate
+    ' each cell alone, so this cross-cell rule has to be checked here.
+    If cfg.YearFrom > 0 And cfg.YearTo > 0 And cfg.YearFrom > cfg.YearTo Then
+        Err.Raise vbObjectError + 551, "RunDailyUpdateYearRange", _
+            "ช่วงปีกลับหัว: YearFrom (" & cfg.YearFrom & ") มากกว่า YearTo (" & _
+            cfg.YearTo & ") — สลับค่าสองช่องนี้ใน ConfigTable แล้วรันใหม่"
+    End If
+
     Dim selectedCols As Collection
     Set selectedCols = ReadSelectedColumns()
 

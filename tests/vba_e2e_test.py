@@ -232,6 +232,17 @@ def main():
             check("T5 all rows from 2566 file",
                   srcs == {"Daily_Update_2566.xlsx"}, srcs)
 
+        # T5c: inverted range (From > To) must be rejected with a clear error
+        set_config(wb, "YearFrom", 2566)
+        set_config(wb, "YearTo", 2565)
+        clear_log(wb)
+        xl.Run("RunDailyUpdateYearRange")
+        z1, z2 = read_log(wb)
+        got = str(z2).split("|") if z2 else []
+        check("T5c inverted year range rejected",
+              len(got) >= 2 and got[0] == "ERR"
+              and int(got[1]) == VB_OBJ_ERR + 551, z2)
+
         wb.Close(SaveChanges=False)
     finally:
         xl.Quit()
