@@ -258,7 +258,7 @@ End Sub
 ' order). Returns the data rows as a 2D array, or Empty for a zero-row
 ' archive. Any mismatch is fatal by design: combining a stale archive
 ' would leave new columns blank on old-year rows and look complete.
-Private Function ReadArchiveRows(ByVal selectedCols As Collection) As Variant
+Public Function ReadArchiveRows(ByVal selectedCols As Collection) As Variant
     Dim lo As ListObject
     Set lo = FindListObject(ARCHIVE_TABLE)
     If lo Is Nothing Then

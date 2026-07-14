@@ -24,6 +24,10 @@ def prep_dirs():
         shutil.copy(os.path.join(REPO, f), os.path.join(SCRATCH, "all_files", f))
     shutil.copy(os.path.join(REPO, "Daily_Update_2566.xlsx"),
                 os.path.join(SCRATCH, "old_files", "Daily_Update_2566.xlsx"))
+    # a second "closed year" (same content, different year in the name)
+    # so the year-range filter has something to include AND exclude
+    shutil.copy(os.path.join(REPO, "Daily_Update_2566.xlsx"),
+                os.path.join(SCRATCH, "old_files", "Daily_Update_2565.xlsx"))
     # current file: different name, different folder (the user's scenario)
     shutil.copy(os.path.join(REPO, "Daily_Update_2567.xlsx"),
                 os.path.join(SCRATCH, "current", "TodaySales.xlsx"))
@@ -33,7 +37,7 @@ def patch_modules():
     (Thai ANSI) because VBE imports .bas as ANSI."""
     mods = []
     for name in ("modUtils", "modConfig", "modCleanHeaders", "modCombine",
-                 "modArchive", "modHeaderList"):
+                 "modArchive", "modHeaderList", "modYearRange"):
         src = open(os.path.join(REPO, "vba", name + ".bas"), encoding="utf-8").read()
         src = re.sub(
             r'MsgBox "[^"]*" & procName[^\n]*\n[^\n]*\n\s*vbCritical, "Daily Update Pipeline"',
@@ -163,7 +167,7 @@ def main():
         z1, z2 = read_log(wb)
         check("T3a archive ran without error", z2 is None, z2)
         sh, headers, nrows, _ = table_dims(wb, "Daily_Update_Archive")
-        check("T3a archive table 3 rows (2566 only)", nrows == 3, nrows)
+        check("T3a archive table 6 rows (2565+2566)", nrows == 6, nrows)
         check("T3a archive sheet hidden",
               wb.Worksheets("Daily_Update_Archive").Visible != -1)
 
@@ -172,11 +176,12 @@ def main():
         z1, z2 = read_log(wb)
         sh, headers, nrows, lo = table_dims(wb, "Daily_Update_Combined")
         check("T3b combine (archive mode) ran without error", z2 is None, z2)
-        check("T3b 5 rows total (3 archive + 2 current)", nrows == 5, nrows)
+        check("T3b 8 rows total (6 archive + 2 current)", nrows == 8, nrows)
         srcs = [lo.DataBodyRange.Cells(r, 5).Value for r in range(1, nrows + 1)]
         check("T3b SourceFile: archive rows then TodaySales.xlsx",
-              srcs[:3] == ["Daily_Update_2566.xlsx"] * 3
-              and srcs[3:] == ["TodaySales.xlsx"] * 2, srcs)
+              srcs[:3] == ["Daily_Update_2565.xlsx"] * 3
+              and srcs[3:6] == ["Daily_Update_2566.xlsx"] * 3
+              and srcs[6:] == ["TodaySales.xlsx"] * 2, srcs)
 
         # ---- T4: column drift must hard-error ----
         lo2 = wb.Worksheets("select column").ListObjects("SelectColumnTable")
@@ -197,10 +202,35 @@ def main():
         xl.Run("RunDailyUpdateCombine")
         z1, z2 = read_log(wb)
         sh, headers, nrows, _ = table_dims(wb, "Daily_Update_Combined")
-        check("T4b rebuild then combine ok", z2 is None and nrows == 5,
+        check("T4b rebuild then combine ok", z2 is None and nrows == 8,
               (z2, nrows))
         check("T4b new column present", headers and "Metrics_Price" in headers,
               headers)
+
+        # ---- T5: year-range extraction from archive ----
+        cfg_lo = wb.Worksheets("config").ListObjects("ConfigTable")
+        cfg_settings = [str(cfg_lo.DataBodyRange.Cells(r, 1).Value)
+                        for r in range(1, cfg_lo.ListRows.Count + 1)]
+        check("T5 YearFrom/YearTo rows auto-added by archive",
+              "YearFrom" in cfg_settings and "YearTo" in cfg_settings,
+              cfg_settings)
+        yf_row = cfg_settings.index("YearFrom") + 1
+        formula = cfg_lo.DataBodyRange.Cells(yf_row, 2).Validation.Formula1
+        check("T5 dropdown lists archive years", formula == "2565,2566", formula)
+
+        set_config(wb, "YearFrom", 2566)
+        set_config(wb, "YearTo", 2566)
+        clear_log(wb)
+        xl.Run("RunDailyUpdateYearRange")
+        z1, z2 = read_log(wb)
+        sh, headers, nrows, lo = table_dims(wb, "Daily_Update_YearRange")
+        check("T5 yearrange ran without error", z2 is None, z2)
+        check("T5 3 rows (2566 only, 2565 excluded)", nrows == 3, nrows)
+        if nrows:
+            srcs = set(lo.DataBodyRange.Cells(r, len(headers)).Value
+                       for r in range(1, nrows + 1))
+            check("T5 all rows from 2566 file",
+                  srcs == {"Daily_Update_2566.xlsx"}, srcs)
 
         wb.Close(SaveChanges=False)
     finally:

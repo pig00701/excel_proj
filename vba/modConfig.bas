@@ -39,6 +39,8 @@ Public Type DailyUpdateConfig
     Separator As String
     FileExtension As String
     CurrentFilePath As String   ' non-empty = archive mode
+    YearFrom As Long            ' 0 = no lower bound (used by modYearRange)
+    YearTo As Long              ' 0 = no upper bound (used by modYearRange)
 End Type
 
 Public Function ReadDailyUpdateConfig() As DailyUpdateConfig
@@ -85,6 +87,8 @@ Public Function ReadDailyUpdateConfig() As DailyUpdateConfig
                     Case "separator":     cfg.Separator = CStr(settingValue)
                     Case "fileextension": cfg.FileExtension = Trim$(CStr(settingValue))
                     Case "currentfilepath": cfg.CurrentFilePath = Trim$(CStr(settingValue))
+                    Case "yearfrom":      cfg.YearFrom = CLng(settingValue)
+                    Case "yearto":        cfg.YearTo = CLng(settingValue)
                 End Select
             End If
         Next r

@@ -93,6 +93,11 @@ Public Sub RunDailyUpdateArchive()
     ' has config/select column sheets, so this is safe here.)
     FindSheet(ThisWorkbook, ARCHIVE_SHEET).Visible = xlSheetHidden
 
+    ' Refresh the YearFrom/YearTo dropdowns in ConfigTable so the year-range
+    ' macro can only ever be pointed at years that actually exist in this
+    ' archive (rows are created if missing).
+    ApplyYearDropdowns cleanedParts
+
     Application.ScreenUpdating = prevScreenUpdating
     Application.EnableEvents = prevEnableEvents
     Application.Calculation = prevCalculation
@@ -124,4 +129,91 @@ ErrHandler:
     Application.DisplayAlerts = prevDisplayAlerts
     Application.AutomationSecurity = prevAutomationSecurity
     ReportError "RunDailyUpdateArchive", errNum, errDesc
+End Sub
+
+' Attach a Data Validation dropdown listing the distinct years found in the
+' archived files to the Value cells of ConfigTable's YearFrom/YearTo rows.
+' Missing rows are appended (with blank values = no bound). Files without
+' a 4-digit year suffix contribute nothing to the list.
+Private Sub ApplyYearDropdowns(ByVal cleanedParts As Collection)
+    ' Collect distinct years from the archived file names.
+    Dim years As Object
+    Set years = CreateObject("Scripting.Dictionary")
+    Dim item As Variant
+    Dim y As Variant
+    For Each item In cleanedParts
+        y = YearFromFileName(CStr(item(1)))
+        If Not IsEmpty(y) Then
+            If Not years.Exists(CLng(y)) Then years.Add CLng(y), True
+        End If
+    Next item
+    If years.Count = 0 Then Exit Sub
+
+    ' Sort ascending (tiny list — simple insertion into an array).
+    Dim arr() As Long
+    ReDim arr(1 To years.Count)
+    Dim n As Long
+    Dim key As Variant
+    n = 0
+    For Each key In years.Keys
+        n = n + 1
+        Dim j As Long
+        j = n
+        Do While j > 1
+            If arr(j - 1) > CLng(key) Then
+                arr(j) = arr(j - 1)
+                j = j - 1
+            Else
+                Exit Do
+            End If
+        Loop
+        arr(j) = CLng(key)
+    Next key
+    Dim listText As String
+    For n = 1 To UBound(arr)
+        listText = listText & IIf(n > 1, ",", "") & CStr(arr(n))
+    Next n
+
+    Dim lo As ListObject
+    Set lo = FindListObject("ConfigTable")
+    If lo Is Nothing Then Exit Sub
+    ApplyDropdownToSetting lo, "YearFrom", listText
+    ApplyDropdownToSetting lo, "YearTo", listText
+End Sub
+
+Private Sub ApplyDropdownToSetting(ByVal lo As ListObject, _
+                                   ByVal settingName As String, _
+                                   ByVal listText As String)
+    Dim settingCol As Long
+    Dim valueCol As Long
+    settingCol = lo.ListColumns("Setting").Index
+    valueCol = lo.ListColumns("Value").Index
+
+    Dim valueCell As Range
+    Set valueCell = Nothing
+    Dim r As Long
+    If Not lo.DataBodyRange Is Nothing Then
+        For r = 1 To lo.ListRows.Count
+            If LCase$(Trim$(CStr(lo.DataBodyRange.Cells(r, settingCol).Value & vbNullString))) _
+               = LCase$(settingName) Then
+                Set valueCell = lo.DataBodyRange.Cells(r, valueCol)
+                Exit For
+            End If
+        Next r
+    End If
+    If valueCell Is Nothing Then
+        Dim newRow As ListRow
+        Set newRow = lo.ListRows.Add
+        newRow.Range.Cells(1, settingCol).Value = settingName
+        Set valueCell = newRow.Range.Cells(1, valueCol)
+    End If
+
+    With valueCell.Validation
+        .Delete
+        .Add Type:=xlValidateList, AlertStyle:=xlValidAlertStop, Formula1:=listText
+        .InCellDropdown = True
+        .IgnoreBlank = True             ' blank stays allowed = "no bound"
+        .InputTitle = settingName
+        .InputMessage = "เลือกปีจาก archive (เว้นว่าง = ไม่จำกัด)"
+    End With
 End Sub

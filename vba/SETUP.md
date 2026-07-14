@@ -25,6 +25,7 @@ Port ของ pipeline เดิม (Power Query) มาเป็น VBA ทั
 | `modCombine.bas` | **`RunDailyUpdateCombine`** — entrypoint หลัก: สแกนโฟลเดอร์ → clean ทีละไฟล์ (targeted read: อ่านเฉพาะ header block + คอลัมน์ที่เลือก) → เติม `SourceFile` → รวมลง sheet `Daily_Update_Combined` / ถ้าตั้ง `CurrentFilePath` ไว้ = archive mode |
 | `modArchive.bas` | **`RunDailyUpdateArchive`** — แช่ข้อมูลไฟล์ปีเก่าทั้งโฟลเดอร์ลง sheet ซ่อน `Daily_Update_Archive` ครั้งเดียว เพื่อให้ combine รายวันเปิดแค่ไฟล์ปัจจุบัน |
 | `modHeaderList.bas` | **`RunDailyUpdateHeaderList`** — ตัวช่วยดู header: อ่านไฟล์แรกที่ใช้ได้ (ถ้าตั้ง `CurrentFilePath` จะใช้ไฟล์นั้นก่อน) แล้ว list ชื่อ header + ตำแหน่งคอลัมน์ลง sheet `Daily_Update_HeaderList` |
+| `modYearRange.bas` | **`RunDailyUpdateYearRange`** — ดึงข้อมูลเฉพาะช่วงปี (`YearFrom`-`YearTo`) จาก archive ตรง ๆ ไม่เปิดไฟล์ภายนอกเลย ผลลง sheet แยก `Daily_Update_YearRange` |
 
 ## ติดตั้ง
 
@@ -80,6 +81,21 @@ Port ของ pipeline เดิม (Power Query) มาเป็น VBA ทั
 
 ลบแถว `CurrentFilePath` ออกเมื่อไหร่ = กลับโหมดปกติ (สแกนทุกไฟล์ใน `FolderPath`)
 โดย sheet archive ที่ซ่อนไว้ไม่ถูกใช้แต่ไม่รบกวนอะไร
+
+## ดึงเฉพาะช่วงปี — `RunDailyUpdateYearRange`
+
+งานวิเคราะห์เฉพาะกิจแบบ "เอาแค่ปี 2564-2566" โดยไม่แตะ flow รายวัน:
+
+- ดึงจาก **archive ตรง ๆ** (ไม่เปิดไฟล์ภายนอกเลย — เสร็จในเสี้ยววินาที)
+  โดยรู้ปีของแต่ละแถวจากท้ายชื่อไฟล์ในคอลัมน์ `SourceFile`
+- ตั้งช่วงที่แถว `YearFrom` / `YearTo` ใน ConfigTable — สองแถวนี้
+  **`RunDailyUpdateArchive` สร้างให้เองพร้อม dropdown** ที่มีเฉพาะปีที่มีอยู่จริงใน archive
+  (เว้นว่าง = ไม่จำกัดฝั่งนั้น)
+- ผลลง sheet แยก `Daily_Update_YearRange` — ไม่ยุ่งกับ `Daily_Update_Combined` และ archive
+- ใช้ตัวเช็คชุดคอลัมน์เดียวกับ combine: archive เก่าไม่ตรง `SelectColumnTable` = error
+  บอกให้ rebuild ก่อน
+- ข้อจำกัด: ได้เฉพาะปีที่อยู่ใน archive — ข้อมูลไฟล์ปีปัจจุบัน (ชื่อไม่มีเลขปี) ดูจาก
+  `Daily_Update_Combined` ตามปกติ
 
 ## ข้อแตกต่างจากฉบับ Power Query
 
