@@ -200,12 +200,24 @@ CleanFail:
     wb.Close SaveChanges:=False
 End Function
 
-' Write a header+data grid to a cleared sheet and wrap it in a ListObject.
+' Write a header+data grid to a fresh sheet and wrap it in a ListObject.
 Public Sub WriteOutputTable(ByRef output As Variant, _
                             ByVal sheetName As String, _
                             ByVal tableName As String)
     Dim ws As Worksheet
     Set ws = GetOutputSheet(sheetName)
+
+    ' A leftover table with the same name anywhere else in the workbook
+    ' (e.g. the old Power Query output loaded on another sheet) would make
+    ' the lo.Name assignment below fail — fail early with a fix instead.
+    Dim existing As ListObject
+    Set existing = FindListObject(tableName)
+    If Not existing Is Nothing Then
+        Err.Raise vbObjectError + 531, "WriteOutputTable", _
+            "มีตารางชื่อ """ & tableName & """ อยู่แล้วบน sheet """ & _
+            existing.Parent.Name & """ (น่าจะเป็นผลลัพธ์ Power Query เดิม) " & _
+            "— ลบตาราง/query เก่านั้นออกก่อน แล้วรันใหม่"
+    End If
 
     Dim target As Range
     Set target = ws.Range("A1").Resize(UBound(output, 1), UBound(output, 2))

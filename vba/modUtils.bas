@@ -60,22 +60,33 @@ Public Function FindSheet(ByVal wb As Workbook, ByVal sheetName As String) As Wo
     Set FindSheet = Nothing
 End Function
 
-' Get (or create) a worksheet in ThisWorkbook and clear it for fresh output.
+' Get a fresh worksheet in ThisWorkbook for output. An existing sheet is
+' DELETED and recreated rather than cleared: Cells.Clear leaves PivotTables
+' and Power Query result ranges behind, and creating the output ListObject
+' on top of those raises error 1004 ("a table cannot overlap...").
+' The output sheet is fully machine-generated, so dropping it is safe.
 Public Function GetOutputSheet(ByVal sheetName As String) As Worksheet
     Dim ws As Worksheet
+    Dim tabIndex As Long
+    Dim prevAlerts As Boolean
+
+    tabIndex = 0
     Set ws = FindSheet(ThisWorkbook, sheetName)
-    If ws Is Nothing Then
-        Set ws = ThisWorkbook.Worksheets.Add(After:=ThisWorkbook.Worksheets(ThisWorkbook.Worksheets.Count))
-        ws.Name = sheetName
-    Else
-        ' Delete old ListObjects first so a shrunken output can't leave
-        ' stale table rows behind, then clear everything.
-        Dim lo As ListObject
-        For Each lo In ws.ListObjects
-            lo.Delete
-        Next lo
-        ws.Cells.Clear
+    If Not ws Is Nothing Then
+        tabIndex = ws.Index
+        prevAlerts = Application.DisplayAlerts
+        Application.DisplayAlerts = False
+        ws.Delete
+        Application.DisplayAlerts = prevAlerts
     End If
+
+    If tabIndex > 0 And tabIndex <= ThisWorkbook.Worksheets.Count Then
+        ' Recreate at the same tab position the old sheet occupied.
+        Set ws = ThisWorkbook.Worksheets.Add(Before:=ThisWorkbook.Worksheets(tabIndex))
+    Else
+        Set ws = ThisWorkbook.Worksheets.Add(After:=ThisWorkbook.Worksheets(ThisWorkbook.Worksheets.Count))
+    End If
+    ws.Name = sheetName
     Set GetOutputSheet = ws
 End Function
 
