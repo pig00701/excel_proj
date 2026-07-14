@@ -118,6 +118,14 @@ Public Function YearFromFileName(ByVal fileName As String) As Variant
     End If
 End Function
 
+' Safe existence check: a malformed path returns False instead of
+' throwing Dir()'s error 52.
+Public Function FileExists(ByVal fullPath As String) As Boolean
+    On Error Resume Next
+    FileExists = (Dir(fullPath) <> vbNullString)
+    On Error GoTo 0
+End Function
+
 ' File name (with extension) from a full path, handling both \ and /.
 Public Function FileNameFromPath(ByVal fullPath As String) As String
     Dim posBack As Long
@@ -135,6 +143,20 @@ Public Function ListSourceFiles(ByVal folderPath As String, ByVal fileExtension 
     Dim files As New Collection
     Dim f As String
     Dim ext As String
+
+    ' A malformed path (stray quotes, https link, illegal characters) makes
+    ' Dir() throw the cryptic error 52 — check the folder exists first and
+    ' name the actual path in the message instead.
+    Dim folderOk As Boolean
+    On Error Resume Next
+    folderOk = (Dir(folderPath, vbDirectory) <> vbNullString)
+    On Error GoTo 0
+    If Not folderOk Then
+        Err.Raise vbObjectError + 518, "ListSourceFiles", _
+            "เปิดโฟลเดอร์ไม่ได้: " & folderPath & vbCrLf & _
+            "— เช็คว่า path ถูกต้อง เป็นโฟลเดอร์ในเครื่อง/network drive " & _
+            "(ไม่ใช่ลิงก์เว็บ) และไม่มีเครื่องหมายคำพูดหรืออักขระแปลกปน"
+    End If
 
     ext = LCase$(fileExtension)
     f = Dir(folderPath & Application.PathSeparator & "*" & fileExtension)

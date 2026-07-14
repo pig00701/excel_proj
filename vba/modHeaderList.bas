@@ -45,7 +45,7 @@ Public Sub RunDailyUpdateHeaderList()
     ' picking column names; the FolderPath files follow as fallback.
     Dim files As New Collection
     If cfg.CurrentFilePath <> vbNullString Then
-        If Dir(cfg.CurrentFilePath) <> vbNullString Then files.Add cfg.CurrentFilePath
+        If FileExists(cfg.CurrentFilePath) Then files.Add cfg.CurrentFilePath
     End If
     Dim folderFile As Variant
     For Each folderFile In ListSourceFiles(cfg.FolderPath, cfg.FileExtension)

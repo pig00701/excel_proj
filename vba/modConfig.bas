@@ -95,7 +95,14 @@ Public Function ReadDailyUpdateConfig() As DailyUpdateConfig
             "ConfigTable ยังไม่ได้ตั้งค่า FolderPath — ใส่ path โฟลเดอร์ไฟล์ต้นทางก่อน"
     End If
 
-    ' Normalize: no trailing separator on the folder, extension starts with "."
+    ' Normalize paths. StripQuotes because Windows' "Copy as path" wraps the
+    ' value in double quotes, which makes Dir() fail with error 52.
+    cfg.FolderPath = StripQuotes(cfg.FolderPath)
+    cfg.CurrentFilePath = StripQuotes(cfg.CurrentFilePath)
+    ValidateLocalPath cfg.FolderPath, "FolderPath"
+    If cfg.CurrentFilePath <> vbNullString Then ValidateLocalPath cfg.CurrentFilePath, "CurrentFilePath"
+
+    ' No trailing separator on the folder, extension starts with "."
     Do While Right$(cfg.FolderPath, 1) = "\" Or Right$(cfg.FolderPath, 1) = "/"
         cfg.FolderPath = Left$(cfg.FolderPath, Len(cfg.FolderPath) - 1)
     Loop
@@ -103,6 +110,24 @@ Public Function ReadDailyUpdateConfig() As DailyUpdateConfig
 
     ReadDailyUpdateConfig = cfg
 End Function
+
+Private Function StripQuotes(ByVal p As String) As String
+    p = Trim$(p)
+    Do While Len(p) >= 2 And Left$(p, 1) = """" And Right$(p, 1) = """"
+        p = Trim$(Mid$(p, 2, Len(p) - 2))
+    Loop
+    StripQuotes = p
+End Function
+
+' Fail with a readable message BEFORE Dir()/Workbooks.Open turn a bad path
+' into a cryptic "error 52: bad file name or number".
+Private Sub ValidateLocalPath(ByVal p As String, ByVal settingName As String)
+    If LCase$(Left$(p, 4)) = "http" Then
+        Err.Raise vbObjectError + 517, "ValidateLocalPath", _
+            settingName & " เป็นลิงก์เว็บ (" & p & ") — VBA เปิดผ่าน https ไม่ได้ " & _
+            "ต้องใช้ path ในเครื่อง เช่นโฟลเดอร์ OneDrive ที่ sync ไว้ (C:\Users\...\OneDrive\...)"
+    End If
+End Sub
 
 ' Column names to keep, in table order, from SelectColumnTable[ColumnName].
 ' Blank rows are skipped. Missing table or empty list is a hard error —

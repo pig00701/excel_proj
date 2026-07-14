@@ -75,7 +75,7 @@ Public Sub RunDailyUpdateCombine()
     totalDataRows = 0
 
     If archiveMode Then
-        If Dir(cfg.CurrentFilePath) = vbNullString Then
+        If Not FileExists(cfg.CurrentFilePath) Then
             Err.Raise vbObjectError + 532, "RunDailyUpdateCombine", _
                 "ไม่พบไฟล์ CurrentFilePath = " & cfg.CurrentFilePath & _
                 " — เช็ค path ใน ConfigTable"
