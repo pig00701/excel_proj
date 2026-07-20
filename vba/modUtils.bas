@@ -185,6 +185,34 @@ Public Function Read2D(ByVal ws As Worksheet, _
     End If
 End Function
 
+' Read the top rowCount x colCount block of a sheet with merged cells
+' EXPANDED: every cell that is blank because it sits inside a merge area
+' gets that area's top-left value. This is ground truth the heuristic
+' fill-right/fill-down can only guess at — a vertically merged banner
+' (value in row 4, blank rows 5-6) stays its own value instead of
+' swallowing text that leaks in from the column to its left.
+Public Function ReadHeaderBlockExpanded(ByVal ws As Worksheet, _
+                                        ByVal rowCount As Long, _
+                                        ByVal colCount As Long) As Variant
+    Dim grid As Variant
+    grid = Read2D(ws, 1, 1, rowCount, colCount)
+
+    Dim r As Long
+    Dim c As Long
+    Dim cell As Range
+    For r = 1 To rowCount
+        For c = 1 To colCount
+            If IsBlankValue(grid(r, c)) Then
+                Set cell = ws.Cells(r, c)
+                If cell.MergeCells Then
+                    grid(r, c) = cell.MergeArea.Cells(1, 1).Value
+                End If
+            End If
+        Next c
+    Next r
+    ReadHeaderBlockExpanded = grid
+End Function
+
 ' Read a sheet's full grid starting from A1 (like Power Query does) into a
 ' 1-based 2D Variant array. Always returns a 2D array, even for one cell.
 Public Function ReadSheetGrid(ByVal ws As Worksheet) As Variant

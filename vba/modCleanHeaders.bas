@@ -41,10 +41,21 @@ Option Explicit
 ' header name of every column. Split out so modCombine can resolve column
 ' positions from a small header-block read WITHOUT loading the whole
 ' sheet, then pull only the columns it needs.
+'
+' useHeuristicFill:
+'   True  (default) — blank header cells are guessed to be merge
+'         continuations and filled right/down (the only option in the
+'         Power Query original, which cannot see merge information).
+'   False — the grid already carries ground truth (read through
+'         ReadHeaderBlockExpanded, which expands real merge areas), so NO
+'         guessing happens: a blank next to "Different" stays blank
+'         instead of inheriting it. Prevents names like
+'         "Q&A_Different_Com3" when Q&A is a vertically merged banner.
 Public Function BuildCombinedHeaders(ByVal rawGrid As Variant, _
                                      ByVal junkRows As Long, _
                                      ByVal headerRows As Long, _
-                                     ByVal separator As String) As String()
+                                     ByVal separator As String, _
+                                     Optional ByVal useHeuristicFill As Boolean = True) As String()
     Dim nRows As Long
     Dim nCols As Long
     nRows = UBound(rawGrid, 1)
@@ -80,28 +91,42 @@ Public Function BuildCombinedHeaders(ByVal rawGrid As Variant, _
     ReDim hdr(1 To headerRows, 1 To nCols)
     Dim lastVal As String
     Dim i As Long
-    For i = 1 To headerRows
-        lastVal = vbNullString
-        For c = 1 To nCols
-            If isBlankCol(c) Then
-                hdr(i, c) = vbNullString
-                lastVal = vbNullString            ' blank column breaks the merge run
-            ElseIf Not IsBlankValue(rawGrid(junkRows + i, c)) Then
-                hdr(i, c) = CStr(rawGrid(junkRows + i, c))
-                lastVal = hdr(i, c)
-            ElseIf lastVal <> vbNullString Then
-                hdr(i, c) = lastVal               ' merged cell continues to the right
-            Else
-                hdr(i, c) = vbNullString
-            End If
-        Next c
-    Next i
-    ' Fill down within each column (merged cells across header rows).
-    For c = 1 To nCols
-        For i = 2 To headerRows
-            If hdr(i, c) = vbNullString Then hdr(i, c) = hdr(i - 1, c)
+    If useHeuristicFill Then
+        For i = 1 To headerRows
+            lastVal = vbNullString
+            For c = 1 To nCols
+                If isBlankCol(c) Then
+                    hdr(i, c) = vbNullString
+                    lastVal = vbNullString        ' blank column breaks the merge run
+                ElseIf Not IsBlankValue(rawGrid(junkRows + i, c)) Then
+                    hdr(i, c) = CStr(rawGrid(junkRows + i, c))
+                    lastVal = hdr(i, c)
+                ElseIf lastVal <> vbNullString Then
+                    hdr(i, c) = lastVal           ' merged cell continues to the right
+                Else
+                    hdr(i, c) = vbNullString
+                End If
+            Next c
         Next i
-    Next c
+        ' Fill down within each column (merged cells across header rows).
+        For c = 1 To nCols
+            For i = 2 To headerRows
+                If hdr(i, c) = vbNullString Then hdr(i, c) = hdr(i - 1, c)
+            Next i
+        Next c
+    Else
+        ' Merge areas were already expanded by the reader — take the grid
+        ' as-is; remaining blanks are genuinely blank.
+        For i = 1 To headerRows
+            For c = 1 To nCols
+                If IsBlankValue(rawGrid(junkRows + i, c)) Then
+                    hdr(i, c) = vbNullString
+                Else
+                    hdr(i, c) = CStr(rawGrid(junkRows + i, c))
+                End If
+            Next c
+        Next i
+    End If
 
     ' --- Step 4: combine levels; consecutive duplicates collapse ----------
     Dim combined() As String

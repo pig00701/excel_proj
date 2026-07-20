@@ -340,12 +340,14 @@ Public Function CleanOneFile(ByRef cfg As DailyUpdateConfig, _
                 headerBottom & ") — เช็คค่าใน ConfigTable"
         End If
 
-        ' 1) Small read: header block only, all columns.
+        ' 1) Small read: header block only, all columns, with real merge
+        '    areas expanded — so no heuristic guessing of blanks is needed.
         Dim headerGrid As Variant
-        headerGrid = Read2D(ws, 1, 1, headerBottom, lastCol)
+        headerGrid = ReadHeaderBlockExpanded(ws, headerBottom, lastCol)
 
         Dim names() As String
-        names = BuildCombinedHeaders(headerGrid, cfg.JunkRows, cfg.HeaderRows, cfg.Separator)
+        names = BuildCombinedHeaders(headerGrid, cfg.JunkRows, cfg.HeaderRows, _
+                                     cfg.Separator, useHeuristicFill:=False)
 
         ' 2) Resolve selected names -> column positions in THIS file.
         Dim nameToIdx As Object
